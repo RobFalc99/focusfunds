@@ -60,6 +60,11 @@ class FocusFundsRepository(private val context: Context) {
         walletDao.updateWalletState(state)
     }
 
+    suspend fun updateSelectedTheme(themeId: Int) = withContext(Dispatchers.IO) {
+        val currentState = getWalletState()
+        walletDao.updateWalletState(currentState.copy(selectedTheme = themeId))
+    }
+
     suspend fun addFocusFunds(amount: Double, description: String) = withContext(Dispatchers.IO) {
         val currentState = getWalletState()
         val newBalance = currentState.balance + amount

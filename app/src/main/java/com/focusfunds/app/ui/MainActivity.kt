@@ -34,10 +34,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -102,42 +104,469 @@ fun isAccessibilityServiceEnabled(context: Context, service: Class<out Accessibi
     return false
 }
 
-// Subtle, slow-moving luxury background simulating brushed metal lights
+// 4 Luxury Themes Dynamic Backgrounds
 @Composable
-fun LuxuryDynamicBackground() {
+fun LuxuryDynamicBackground(theme: Int) {
     val infiniteTransition = rememberInfiniteTransition(label = "ambient_light")
     
-    val posX by infiniteTransition.animateFloat(
-        initialValue = 0.1f,
-        targetValue = 0.9f,
+    // Theme 0: Glassmorphism moving gold/purple aura positions
+    val aura1X by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.85f,
         animationSpec = infiniteRepeatable(
-            animation = tween(12000, easing = LinearEasing),
+            animation = tween(15000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "posX"
+        label = "aura1X"
     )
-    val posY by infiniteTransition.animateFloat(
+    val aura1Y by infiniteTransition.animateFloat(
         initialValue = 0.2f,
         targetValue = 0.8f,
         animationSpec = infiniteRepeatable(
-            animation = tween(16000, easing = LinearEasing),
+            animation = tween(18000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "posY"
+        label = "aura1Y"
+    )
+    val aura2X by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(20000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "aura2X"
+    )
+    val aura2Y by infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(14000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "aura2Y"
     )
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         drawRect(Color.Black)
-        drawRect(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    Color(0xFF0F0F12), // Deep Anthracite
-                    Color(0xFF000000)
-                ),
-                center = Offset(size.width * posX, size.height * posY),
-                radius = size.width * 1.6f
-            )
-        )
+        
+        when (theme) {
+            0 -> { // Hologram Glassmorphism
+                // Draw gold aura
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFFD4AF37).copy(alpha = 0.08f), Color.Transparent),
+                        radius = size.width * 0.9f
+                    ),
+                    center = Offset(size.width * aura1X, size.height * aura1Y)
+                )
+                // Draw purple aura
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFF8A2BE2).copy(alpha = 0.08f), Color.Transparent),
+                        radius = size.width * 0.9f
+                    ),
+                    center = Offset(size.width * aura2X, size.height * aura2Y)
+                )
+            }
+            1 -> { // Stealth Neumorphism - Flat Matte Finish
+                drawRect(Color(0xFF000000))
+            }
+            2 -> { // Editorial Minimalist Brutalism - Pure Black Static
+                drawRect(Color(0xFF000000))
+            }
+            3 -> { // Sovereign Gold Leaf - Static Golden Radial Halo
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFF332205).copy(alpha = 0.15f), Color.Transparent),
+                        center = center,
+                        radius = size.width * 0.8f
+                    )
+                )
+            }
+        }
+    }
+}
+
+// 4 Luxury Themes Credit Card rendering
+@Composable
+fun LuxuryCreditCard(
+    balance: Double,
+    theme: Int,
+    scale: Float = 1f,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer_glare")
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = -350f,
+        targetValue = 950f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerOffset"
+    )
+
+    val reflectionBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.Transparent,
+            Color.White.copy(alpha = 0.04f),
+            Color.White.copy(alpha = 0.14f),
+            Color.White.copy(alpha = 0.04f),
+            Color.Transparent
+        ),
+        start = Offset(shimmerOffset, 0f),
+        end = Offset(shimmerOffset + 150f, 320f)
+    )
+
+    val balanceText = String.format(Locale.US, "%.2f FF", balance)
+
+    Box(
+        modifier = modifier
+            .width(310.dp * scale)
+            .height(185.dp * scale)
+    ) {
+        when (theme) {
+            0 -> { // Theme 1: Glassmorphism Dark (The Hologram)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.03f))
+                        .border(1.2.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+                ) {
+                    // Reflection
+                    Box(modifier = Modifier.fillMaxSize().background(reflectionBrush))
+                    
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(22.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Hologram Wallet",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Light,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "H",
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                        
+                        Text(
+                            text = balanceText,
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Light,
+                            fontFamily = FontFamily.SansSerif,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            letterSpacing = 1.sp
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = "L'OTTIMIZZATORE",
+                                color = Color.White.copy(alpha = 0.5f),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraLight,
+                                letterSpacing = 1.5.sp
+                            )
+                            // Chip drawing
+                            Canvas(modifier = Modifier.size(28.dp, 18.dp)) {
+                                drawRoundRect(
+                                    color = Color.White.copy(alpha = 0.15f),
+                                    size = size,
+                                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            1 -> { // Theme 2: Dark Neumorphism (Stealth Wealth)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF030303)) // Blends with background
+                ) {
+                    // Custom Neumorphic borders and emboss
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        // Top-left soft highlight
+                        drawRoundRect(
+                            color = Color(0xFF1C1C1E).copy(alpha = 0.5f),
+                            topLeft = Offset(1.dp.toPx(), 1.dp.toPx()),
+                            size = Size(size.width - 2.dp.toPx(), size.height - 2.dp.toPx()),
+                            cornerRadius = CornerRadius(20.dp.toPx()),
+                            style = Stroke(2.dp.toPx())
+                        )
+                        // Bottom-right shadow
+                        drawRoundRect(
+                            color = Color.Black,
+                            topLeft = Offset(2.dp.toPx(), 2.dp.toPx()),
+                            size = Size(size.width - 4.dp.toPx(), size.height - 4.dp.toPx()),
+                            cornerRadius = CornerRadius(20.dp.toPx()),
+                            style = Stroke(2.dp.toPx())
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(22.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Stealth Cash",
+                                color = Color(0xFF555555),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "S",
+                                color = Color(0xFF444444),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Serif
+                            )
+                        }
+
+                        // Debossed typography look (shadow offset)
+                        Text(
+                            text = balanceText,
+                            color = Color(0xFF6B6B72),
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.SansSerif,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            letterSpacing = 1.sp,
+                            style = TextStyle(
+                                shadow = Shadow(
+                                    color = Color.Black,
+                                    offset = Offset(1.5f, 1.5f),
+                                    blurRadius = 2f
+                                )
+                            )
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = "L'OTTIMIZZATORE",
+                                color = Color(0xFF444444),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = 1.5.sp,
+                                style = TextStyle(
+                                    shadow = Shadow(
+                                        color = Color.Black,
+                                        offset = Offset(1f, 1f),
+                                        blurRadius = 1f
+                                    )
+                                )
+                            )
+                            // Chip drawing (Engraved)
+                            Canvas(modifier = Modifier.size(28.dp, 18.dp)) {
+                                drawRoundRect(
+                                    color = Color(0xFF0F0F0F),
+                                    size = size,
+                                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                )
+                                drawRoundRect(
+                                    color = Color(0xFF1E1E1E).copy(alpha = 0.3f),
+                                    size = size,
+                                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
+                                    style = Stroke(1.dp.toPx())
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            2 -> { // Theme 3: Editorial Minimalist Brutalism (High Fashion)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(4.dp)) // Sharp edge
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color(0xFF222222), Color(0xFF111111))
+                            )
+                        )
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(32.dp), // Extreme whitespace
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "TITANIUM BLOCK",
+                                color = Color(0xFF888888),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            Text(
+                                text = "B",
+                                color = Color.White,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Black,
+                                fontFamily = FontFamily.Serif
+                            )
+                        }
+
+                        // High contrast Serif typography printed huge
+                        Text(
+                            text = balanceText,
+                            color = Color.White,
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = FontFamily.Serif,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = "L'OTTIMIZZATORE",
+                                color = Color(0xFF888888),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            // Minimalist outline box instead of chip
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp, 16.dp)
+                                    .border(1.dp, Color(0xFF888888), RoundedCornerShape(2.dp))
+                            )
+                        }
+                    }
+                }
+            }
+            3 -> { // Theme 4: Luxury Gold Leaf (The Sovereign)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF09090A))
+                        .border(
+                            width = 1.8.dp,
+                            brush = Brush.sweepGradient(
+                                colors = listOf(Color(0xFFD4AF37), Color(0xFFFFDF73), Color(0xFF996515), Color(0xFFD4AF37))
+                            ),
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                ) {
+                    Box(modifier = Modifier.fillMaxSize().background(reflectionBrush))
+                    
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(22.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Sovereign Gold",
+                                color = Color(0xFFD4AF37),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.5.sp
+                            )
+                            Text(
+                                text = "F",
+                                color = Color.White,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Serif
+                            )
+                        }
+
+                        Text(
+                            text = balanceText,
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Light,
+                            fontFamily = FontFamily.SansSerif,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            letterSpacing = 1.5.sp
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = "L'OTTIMIZZATORE",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraLight,
+                                letterSpacing = 1.5.sp
+                            )
+                            
+                            // Gold Chip canvas
+                            Canvas(modifier = Modifier.size(30.dp, 20.dp)) {
+                                drawRoundRect(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(Color(0xFFE5C060), Color(0xFFC59F3F))
+                                    ),
+                                    size = size,
+                                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                )
+                                drawLine(Color(0xFF3C2F0F), Offset(10.dp.toPx(), 0f), Offset(10.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
+                                drawLine(Color(0xFF3C2F0F), Offset(20.dp.toPx(), 0f), Offset(20.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
+                                drawLine(Color(0xFF3C2F0F), Offset(0f, 10.dp.toPx()), Offset(30.dp.toPx(), 10.dp.toPx()), strokeWidth = 1f)
+                                drawRoundRect(
+                                    color = Color(0xFF3C2F0F),
+                                    topLeft = Offset(10.dp.toPx(), 5.dp.toPx()),
+                                    size = Size(10.dp.toPx(), 10.dp.toPx()),
+                                    cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                                    style = Stroke(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -154,6 +583,7 @@ fun FocusFundsApp() {
     }
 
     val inFocus = walletState?.inFocusMode == true
+    val currentTheme = walletState?.selectedTheme ?: 0
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -164,8 +594,8 @@ fun FocusFundsApp() {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Shared Dynamic Luxury Background
-        LuxuryDynamicBackground()
+        // Shared Dynamic Background based on selected theme
+        LuxuryDynamicBackground(theme = currentTheme)
 
         Column(
             modifier = Modifier
@@ -213,6 +643,13 @@ fun FocusFundsApp() {
 }
 
 @Composable
+fun PaddingWrapper(content: @Composable () -> Unit) {
+    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+        content()
+    }
+}
+
+@Composable
 fun LuxuryTabSelector(selectedTab: Int, onTabSelected: (Int) -> Unit) {
     val tabs = listOf("Wallet", "App", "Movimenti", "Report")
     Row(
@@ -255,13 +692,6 @@ fun LuxuryTabSelector(selectedTab: Int, onTabSelected: (Int) -> Unit) {
 }
 
 @Composable
-fun PaddingWrapper(content: @Composable () -> Unit) {
-    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-        content()
-    }
-}
-
-@Composable
 fun PermissionOverlay(
     hasOverlay: Boolean,
     hasAccess: Boolean,
@@ -285,7 +715,7 @@ fun PermissionOverlay(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "FocusFunds richiede permessi speciali per intercettare l'apertura delle app e mostrare l'overlay di sblocco POS.",
+            text = "FocusFunds requires special permissions to block apps and show the terminal unlock screen.",
             color = Color.LightGray,
             fontSize = 14.sp,
             textAlign = TextAlign.Center,
@@ -330,9 +760,11 @@ fun DashboardTab(
     repository: FocusFundsRepository
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val inFocus = walletState?.inFocusMode == true
     val balance = walletState?.balance ?: 5.0
     val startTimestamp = walletState?.focusStartTimestamp ?: 0L
+    val currentTheme = walletState?.selectedTheme ?: 0
 
     var liveDurationMs by remember { mutableStateOf(0L) }
 
@@ -347,28 +779,14 @@ fun DashboardTab(
         }
     }
 
-    // Shimmer reflection effect
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmer_glare_dashboard")
-    val shimmerOffset by infiniteTransition.animateFloat(
-        initialValue = -350f,
-        targetValue = 950f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerOffset"
-    )
-
     // Calculate current live balance (0.01 FF every 6 seconds)
     val liveBalance = if (inFocus) {
         val elapsedMs = System.currentTimeMillis() - startTimestamp
-        // 0.01 FF every 6 seconds (6000 ms)
         balance + (elapsedMs / 60000.0) * 0.1
     } else {
         balance
     }
 
-    // Card 3D floating animation when focusing
     val cardScale by animateFloatAsState(
         targetValue = if (inFocus) 1.05f else 1f,
         animationSpec = tween(800, easing = EaseInOutCirc),
@@ -382,7 +800,6 @@ fun DashboardTab(
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Minimal Title Header
         if (!inFocus) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -402,150 +819,42 @@ fun DashboardTab(
                 )
             }
         } else {
-            // Emptiness/Minimalism when focusing
             Spacer(modifier = Modifier.height(10.dp))
         }
 
-        // Protagonist Luxury Credit Card
-        val reflectionBrush = Brush.linearGradient(
-            colors = listOf(
-                Color.Transparent,
-                Color.White.copy(alpha = 0.04f),
-                Color.White.copy(alpha = 0.14f),
-                Color.White.copy(alpha = 0.04f),
-                Color.Transparent
-            ),
-            start = Offset(shimmerOffset, 0f),
-            end = Offset(shimmerOffset + 150f, 320f)
+        // Render themed credit card
+        LuxuryCreditCard(
+            balance = liveBalance,
+            theme = currentTheme,
+            scale = cardScale
         )
 
-        Box(
-            modifier = Modifier
-                .width(310.dp * cardScale)
-                .height(185.dp * cardScale)
-                .clip(RoundedCornerShape(16.dp))
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(Color(0xFF1E1E1E), Color(0xFF030303))
-                    )
-                )
-                .border(
-                    width = 1.5.dp,
-                    brush = Brush.sweepGradient(
-                        colors = listOf(Color(0xFFD4AF37), Color(0xFF332205), Color(0xFFF3E5AB), Color(0xFFD4AF37))
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            // Shiny reflection sweep
+        // Theme Switcher button (visible only when not in Focus Mode)
+        if (!inFocus) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(reflectionBrush)
-            )
-
-            // Card face details
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(22.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "FocusFunds",
-                        color = Color(0xFFD4AF37),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 1.5.sp
-                    )
-                    Text(
-                        text = "F",
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Serif
-                    )
-                }
-
-                // Balance display engraved directly on card
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = String.format(Locale.US, "%.2f FF", liveBalance),
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Light,
-                        fontFamily = FontFamily.SansSerif,
-                        letterSpacing = 1.sp
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Text(
-                        text = "L'OTTIMIZZATORE",
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraLight,
-                        letterSpacing = 1.5.sp
-                    )
-                    
-                    // Smart Chip canvas
-                    Canvas(modifier = Modifier.size(30.dp, 20.dp)) {
-                        drawRoundRect(
-                            brush = Brush.linearGradient(
-                                colors = listOf(Color(0xFFE5C060), Color(0xFFC59F3F))
-                            ),
-                            size = size,
-                            cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
-                        )
-                        drawLine(Color(0xFF3C2F0F), Offset(10.dp.toPx(), 0f), Offset(10.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
-                        drawLine(Color(0xFF3C2F0F), Offset(20.dp.toPx(), 0f), Offset(20.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
-                        drawLine(Color(0xFF3C2F0F), Offset(0f, 10.dp.toPx()), Offset(30.dp.toPx(), 10.dp.toPx()), strokeWidth = 1f)
-                        drawRoundRect(
-                            color = Color(0xFF3C2F0F),
-                            topLeft = Offset(10.dp.toPx(), 5.dp.toPx()),
-                            size = Size(10.dp.toPx(), 10.dp.toPx()),
-                            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
-                            style = Stroke(1f)
-                        )
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF0F0F0F).copy(alpha = 0.8f))
+                    .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
+                    .clickable {
+                        val nextTheme = (currentTheme + 1) % 4
+                        coroutineScope.launch {
+                            repository.updateSelectedTheme(nextTheme)
+                        }
                     }
-                }
-            }
-        }
-
-        // Minimalist info when not focusing
-        if (!inFocus) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                val themeNames = listOf("HOLOGRA (Glassmorphic)", "STEALTH (Neumorphic)", "BRUTAL (Minimalist)", "SOVEREIGN (Gold Leaf)")
                 Text(
-                    text = "TASSO DI ACCUMULO ATTIVO",
-                    color = Color.Gray,
+                    text = "TEMA: ${themeNames[currentTheme]} ▲",
+                    color = Color(0xFFD4AF37),
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.5.sp,
                     fontFamily = FontFamily.Monospace
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "0.01 FF guadagnati ogni 6 secondi",
-                    color = Color.LightGray,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Normal
-                )
             }
         } else {
-            // Emptiness in focus screen to keep user concentrated
             Spacer(modifier = Modifier.height(10.dp))
         }
 

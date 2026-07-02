@@ -42,16 +42,16 @@ import com.focusfunds.app.data.FocusFundsRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// Synthesize a high-pitched crystal "dling" sound (C6 + G6 chord with exponential decay)
+// Synthesize C6 + G6 crystal chord sound
 fun playSuccessSound() {
     Thread {
         val sampleRate = 44100
-        val duration = 0.6 // seconds
+        val duration = 0.6
         val numSamples = (duration * sampleRate).toInt()
         val buffer = ShortArray(numSamples)
         
-        val freq1 = 1046.50 // C6 note
-        val freq2 = 1567.98 // G6 note
+        val freq1 = 1046.50 // C6
+        val freq2 = 1567.98 // G6
         
         for (i in 0 until numSamples) {
             val t = i.toDouble() / sampleRate
@@ -79,7 +79,7 @@ fun playSuccessSound() {
     }.start()
 }
 
-// Generate premium haptic vibration
+// Custom haptic vibration
 fun triggerHaptics(context: Context, doubleVibrate: Boolean = false) {
     try {
         val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -131,45 +131,34 @@ fun POSOverlayContent(
     var isApproving by remember { mutableStateOf(false) }
     var hasApproved by remember { mutableStateOf(false) }
     
-    // Swipe animation state
     var cardOffsetY by remember { mutableStateOf(0f) }
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 150.dp.toPx() }
     
     val balance = walletState?.balance ?: 5.0
     val cost = inputMinutes.toIntOrNull()?.toDouble() ?: 0.0
+    val currentTheme = walletState?.selectedTheme ?: 0
 
-    // Card metallic shine animation
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmer_glare")
-    val shimmerOffset by infiniteTransition.animateFloat(
-        initialValue = -300f,
-        targetValue = 900f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerOffset"
-    )
-
-    // Gold card glow when approved
+    // Radial gold wave when swiped/tapped
     val successWaveVal = remember { Animatable(0f) }
     LaunchedEffect(hasApproved) {
         if (hasApproved) {
             successWaveVal.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(700, easing = DecelerateInterpolator().toEasing())
+                animationSpec = tween(700, easing = LinearOutSlowInEasing)
             )
         }
     }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF000000) // Pure Black
+        color = Color(0xFF000000)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            LuxuryDynamicBackground()
-            
-            // Gold success wave background effect
+            // Shared Dynamic Luxury Background
+            LuxuryDynamicBackground(theme = currentTheme)
+
+            // Gold wave overlay
             if (hasApproved) {
                 Box(
                     modifier = Modifier
@@ -199,7 +188,7 @@ fun POSOverlayContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top Header (Apple Pay Style)
+                // Header (Apple Wallet style)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -224,7 +213,7 @@ fun POSOverlayContent(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF1E1E1E))
+                            .background(Color(0xFF1E1E1E).copy(alpha = 0.8f))
                             .clickable { onCancel() }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
@@ -244,13 +233,10 @@ fun POSOverlayContent(
                         .padding(top = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // NFC Contactless logo
                     Canvas(modifier = Modifier.size(36.dp)) {
                         val strokeWidth = 3.dp.toPx()
                         val color = if (hasApproved) Color(0xFFD4AF37) else Color.Gray
-                        // Center dot
                         drawCircle(color, radius = 3.dp.toPx(), center = Offset(18.dp.toPx(), 18.dp.toPx()))
-                        // Curved waves
                         drawArc(
                             color = color,
                             startAngle = -45f,
@@ -280,7 +266,7 @@ fun POSOverlayContent(
                     )
                 }
 
-                // Terminal Display (Sleek minimalist panel)
+                // Terminal Display (Minimalist panel)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -305,7 +291,7 @@ fun POSOverlayContent(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF0F0F0F))
+                            .background(Color(0xFF0F0F0F).copy(alpha = 0.8f))
                             .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(8.dp))
                             .padding(horizontal = 14.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -329,7 +315,7 @@ fun POSOverlayContent(
                     }
                 }
 
-                // Quick presets (pill design)
+                // Quick presets
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -357,7 +343,7 @@ fun POSOverlayContent(
                     }
                 }
 
-                // Numeric Keypad (Apple iOS Style, translucent)
+                // Numeric Keypad
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -381,7 +367,7 @@ fun POSOverlayContent(
                                     modifier = Modifier
                                         .size(60.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF0F0F0F))
+                                        .background(Color(0xFF0F0F0F).copy(alpha = 0.8f))
                                         .border(1.dp, Color(0xFF1F1F1F), CircleShape)
                                         .clickable {
                                             triggerHaptics(context)
@@ -411,14 +397,13 @@ fun POSOverlayContent(
                     }
                 }
 
-                // Credit Card Swipe (Apple Wallet Style)
+                // Themed Credit Card Swipe
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(160.dp),
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    // Swipe guide background track
                     Box(
                         modifier = Modifier
                             .width(280.dp)
@@ -429,7 +414,7 @@ fun POSOverlayContent(
                         contentAlignment = Alignment.TopCenter
                     ) {
                         Text(
-                            text = "▲ TRASCINA VERSO L'ALTO PER SBLOCCARE ▲",
+                            text = "▲ TRASCINA LA CARTA VERSO L'ALTO ▲",
                             color = Color(0xFF444444),
                             fontSize = 8.sp,
                             fontWeight = FontWeight.Bold,
@@ -438,37 +423,10 @@ fun POSOverlayContent(
                         )
                     }
 
-                    // Skeuomorphic Luxury Credit Card
-                    val reflectionBrush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.05f),
-                            Color.White.copy(alpha = 0.15f),
-                            Color.White.copy(alpha = 0.05f),
-                            Color.Transparent
-                        ),
-                        start = Offset(shimmerOffset, 0f),
-                        end = Offset(shimmerOffset + 150f, 300f)
-                    )
-
+                    // Draggable Box container for the themed credit card
                     Box(
                         modifier = Modifier
                             .offset { IntOffset(0, cardOffsetY.toInt()) }
-                            .width(270.dp)
-                            .height(125.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(Color(0xFF161616), Color(0xFF030303))
-                                )
-                            )
-                            .border(
-                                width = 1.dp,
-                                brush = Brush.sweepGradient(
-                                    colors = listOf(Color(0xFFD4AF37), Color(0xFF332205), Color(0xFFF3E5AB), Color(0xFFD4AF37))
-                                ),
-                                shape = RoundedCornerShape(14.dp)
-                            )
                             .pointerInput(isApproving || hasApproved) {
                                 if (isApproving || hasApproved) return@pointerInput
                                 detectDragGestures(
@@ -504,90 +462,19 @@ fun POSOverlayContent(
                                 )
                             }
                     ) {
-                        // Reflective light overlay
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(reflectionBrush)
+                        // Render unified themed credit card scaled down to 0.9f
+                        LuxuryCreditCard(
+                            balance = balance,
+                            theme = currentTheme,
+                            scale = 0.9f
                         )
-
-                        // Card face details
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(14.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "FocusFunds",
-                                    color = Color(0xFFD4AF37),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 1.sp
-                                )
-                                Text(
-                                    text = "F",
-                                    color = Color.White,
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Serif
-                                )
-                            }
-
-                            // Skeuomorphic gold chip drawn on Canvas
-                            Canvas(modifier = Modifier.size(28.dp, 20.dp)) {
-                                drawRoundRect(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(Color(0xFFE5C060), Color(0xFFC59F3F))
-                                    ),
-                                    size = size,
-                                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
-                                )
-                                // Internal contact division lines
-                                drawLine(Color(0xFF3C2F0F), Offset(9.dp.toPx(), 0f), Offset(9.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
-                                drawLine(Color(0xFF3C2F0F), Offset(19.dp.toPx(), 0f), Offset(19.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
-                                drawLine(Color(0xFF3C2F0F), Offset(0f, 10.dp.toPx()), Offset(28.dp.toPx(), 10.dp.toPx()), strokeWidth = 1f)
-                                drawRoundRect(
-                                    color = Color(0xFF3C2F0F),
-                                    topLeft = Offset(9.dp.toPx(), 5.dp.toPx()),
-                                    size = Size(10.dp.toPx(), 10.dp.toPx()),
-                                    cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
-                                    style = Stroke(1f)
-                                )
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                Text(
-                                    text = "L'OTTIMIZZATORE",
-                                    color = Color.White,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.ExtraLight,
-                                    letterSpacing = 1.5.sp
-                                )
-                                Text(
-                                    text = "BLACK CARD",
-                                    color = Color(0xFFD4AF37),
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
                     }
                 }
             }
         }
     }
 
-    // Insufficient Funds Dialog (Emergency Unlock)
+    // Insufficient Funds Dialog
     if (showInsufficientDialog) {
         AlertDialog(
             onDismissRequest = { },
@@ -639,12 +526,5 @@ fun POSOverlayContent(
                 }
             }
         )
-    }
-}
-
-// Cubic Hermite interpolator helper for decelerating animation curve
-class DecelerateInterpolator {
-    fun toEasing(): (Float) -> Float = { input ->
-        1.0f - (1.0f - input) * (1.0f - input)
     }
 }

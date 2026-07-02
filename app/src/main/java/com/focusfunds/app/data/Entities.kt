@@ -8,7 +8,8 @@ data class WalletState(
     @PrimaryKey val id: Int = 1,
     val balance: Double = 5.0, // Welcome bonus of 5.0 FF
     val inFocusMode: Boolean = false,
-    val focusStartTimestamp: Long = 0L
+    val focusStartTimestamp: Long = 0L,
+    val selectedTheme: Int = 0
 )
 
 @Entity(tableName = "blocked_apps")
