@@ -1,0 +1,13 @@
+.env
+*.class
+*.log
+.gradle
+build/
+local.properties
+.cxx
+/app/build/
+.idea/
+*.iml
+captures/
+.externalNativeBuild
+.DS_Store

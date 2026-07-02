@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FocusFunds</string>
+    <string name="accessibility_service_desc">Servizio di Accessibilita FocusFunds per intercettare e bloccare le applicazioni fonte di distrazione.</string>
+</resources>
