@@ -9,19 +9,26 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -84,7 +91,6 @@ fun triggerHaptics(context: Context, doubleVibrate: Boolean = false) {
         }
         if (vibrator != null && vibrator.hasVibrator()) {
             if (doubleVibrate) {
-                // Two short pulses for error
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     val timings = longArrayOf(0, 80, 80, 80)
                     val amplitudes = intArrayOf(0, 180, 0, 180)
@@ -94,7 +100,6 @@ fun triggerHaptics(context: Context, doubleVibrate: Boolean = false) {
                     vibrator.vibrate(longArrayOf(0, 80, 80, 80), -1)
                 }
             } else {
-                // One single sharp pulse for approval
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vibrator.vibrate(VibrationEffect.createOneShot(120, VibrationEffect.DEFAULT_AMPLITUDE))
                 } else {
@@ -129,353 +134,450 @@ fun POSOverlayContent(
     // Swipe animation state
     var cardOffsetY by remember { mutableStateOf(0f) }
     val density = LocalDensity.current
-    val swipeThresholdPx = with(density) { 130.dp.toPx() }
+    val swipeThresholdPx = with(density) { 150.dp.toPx() }
     
     val balance = walletState?.balance ?: 5.0
     val cost = inputMinutes.toIntOrNull()?.toDouble() ?: 0.0
 
-    // Card border glow animation
-    val infiniteTransition = rememberInfiniteTransition(label = "gold_border")
-    val borderRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
+    // Card metallic shine animation
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer_glare")
+    val shimmerOffset by infiniteTransition.animateFloat(
+        initialValue = -300f,
+        targetValue = 900f,
         animationSpec = infiniteRepeatable(
-            animation = tween(3000, easing = LinearEasing),
+            animation = tween(3500, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "rotation"
+        label = "shimmerOffset"
     )
 
-    val luxuryBorderBrush = Brush.sweepGradient(
-        colors = listOf(
-            Color(0xFFD4AF37), // Gold
-            Color(0xFFC0C0C0), // Platinum
-            Color(0xFF996515), // Dark Gold
-            Color(0xFFF3E5AB), // Mellow Gold
-            Color(0xFFD4AF37)
-        )
-    )
+    // Gold card glow when approved
+    val successWaveVal = remember { Animatable(0f) }
+    LaunchedEffect(hasApproved) {
+        if (hasApproved) {
+            successWaveVal.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(700, easing = DecelerateInterpolator().toEasing())
+            )
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF000000) // True Black OLED
+        color = Color(0xFF000000) // Pure Black
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "FOCUS FUNDS POS",
-                        color = Color(0xFFD4AF37),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        letterSpacing = 2.sp
-                    )
-                    Text(
-                        text = "Transazione Richiesta",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Light
-                    )
-                }
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Gold success wave background effect
+            if (hasApproved) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF1E1E1E))
-                        .clickable { onCancel() }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "ANNULLA",
-                        color = Color.LightGray,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                }
+                        .fillMaxSize()
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0xFFD4AF37).copy(alpha = 0.25f * (1f - successWaveVal.value)),
+                                    Color.Transparent
+                                ),
+                                center = Offset(
+                                    x = density.run { 180.dp.toPx() },
+                                    y = density.run { 120.dp.toPx() }
+                                ),
+                                radius = successWaveVal.value * density.run { 500.dp.toPx() }
+                            )
+                        )
+                )
             }
 
-            // Terminal Display
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF0D0D0D))
-                    .border(1.dp, Color(0xFF1F1F1F), RoundedCornerShape(12.dp))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = appName.uppercase(),
-                    color = Color.LightGray,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = if (inputMinutes.isEmpty()) "0" else inputMinutes,
-                    color = Color.White,
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFamily = FontFamily.Monospace
-                )
-                Text(
-                    text = "MINUTI RICHIESTI",
-                    color = Color(0xFF8E8E93),
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.5.sp
-                )
-                Divider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = Color(0xFF1E1E1E)
-                )
+                // Top Header (Apple Pay Style)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Costo: ${String.format("%.2f", cost)} FF",
-                        color = if (cost > balance) Color(0xFFCF6679) else Color(0xFFD4AF37),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "Saldo: ${String.format("%.2f", balance)} FF",
-                        color = Color.Gray,
-                        fontSize = 13.sp
-                    )
-                }
-            }
-
-            // Presets
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                listOf(2, 5, 10, 15, 30).forEach { mins ->
+                    Column {
+                        Text(
+                            text = "ACCESSIBILITÀ LIMITATA",
+                            color = Color(0xFFD4AF37),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Text(
+                            text = appName,
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (inputMinutes == mins.toString()) Color(0xFFD4AF37) else Color(0xFF1E1E1E))
-                            .clickable {
-                                inputMinutes = mins.toString()
-                                triggerHaptics(context)
-                            }
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF1E1E1E))
+                            .clickable { onCancel() }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = "${mins}m",
-                            color = if (inputMinutes == mins.toString()) Color.Black else Color.White,
+                            text = "Annulla",
+                            color = Color.LightGray,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
-            }
 
-            // Numeric Keypad
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-            ) {
-                val keys = listOf(
-                    listOf("1", "2", "3"),
-                    listOf("4", "5", "6"),
-                    listOf("7", "8", "9"),
-                    listOf("C", "0", "⌫")
-                )
-                keys.forEach { row ->
+                // NFC terminal receptor mockup
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // NFC Contactless logo
+                    Canvas(modifier = Modifier.size(36.dp)) {
+                        val strokeWidth = 3.dp.toPx()
+                        val color = if (hasApproved) Color(0xFFD4AF37) else Color.Gray
+                        // Center dot
+                        drawCircle(color, radius = 3.dp.toPx(), center = Offset(18.dp.toPx(), 18.dp.toPx()))
+                        // Curved waves
+                        drawArc(
+                            color = color,
+                            startAngle = -45f,
+                            sweepAngle = 90f,
+                            useCenter = false,
+                            topLeft = Offset(11.dp.toPx(), 11.dp.toPx()),
+                            size = Size(14.dp.toPx(), 14.dp.toPx()),
+                            style = Stroke(strokeWidth)
+                        )
+                        drawArc(
+                            color = color,
+                            startAngle = -45f,
+                            sweepAngle = 90f,
+                            useCenter = false,
+                            topLeft = Offset(6.dp.toPx(), 6.dp.toPx()),
+                            size = Size(24.dp.toPx(), 24.dp.toPx()),
+                            style = Stroke(strokeWidth)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (hasApproved) "PAGAMENTO APPROVATO" else "AVVICINA LA CARTA AL LETTORE",
+                        color = if (hasApproved) Color(0xFFD4AF37) else Color.Gray,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    )
+                }
+
+                // Terminal Display (Sleek minimalist panel)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (inputMinutes.isEmpty()) "0" else inputMinutes,
+                        color = Color.White,
+                        fontSize = 54.sp,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = FontFamily.SansSerif
+                    )
+                    Text(
+                        text = "MINUTI RICHIESTI",
+                        color = Color(0xFF8E8E93),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF0F0F0F))
+                            .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        row.forEach { key ->
-                            Box(
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(RoundedCornerShape(32.dp))
-                                    .background(Color(0xFF0F0F0F))
-                                    .clickable {
-                                        triggerHaptics(context)
-                                        when (key) {
-                                            "C" -> inputMinutes = ""
-                                            "⌫" -> if (inputMinutes.isNotEmpty()) {
-                                                inputMinutes = inputMinutes.dropLast(1)
-                                            }
-                                            else -> {
-                                                if (inputMinutes.length < 3) {
-                                                    inputMinutes += key
+                        Text(
+                            text = "Costo: ${String.format("%.1f", cost)} FF",
+                            color = if (cost > balance) Color(0xFFFF5252) else Color(0xFFD4AF37),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "|",
+                            color = Color(0xFF222222),
+                            fontSize = 12.sp
+                        )
+                        Text(
+                            text = "Saldo: ${String.format("%.2f", balance)} FF",
+                            color = Color.Gray,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                // Quick presets (pill design)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    listOf(2, 5, 10, 15, 30).forEach { mins ->
+                        val selected = inputMinutes == mins.toString()
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (selected) Color(0xFFD4AF37) else Color(0xFF111111))
+                                .border(1.dp, if (selected) Color(0xFFD4AF37) else Color(0xFF222222), RoundedCornerShape(16.dp))
+                                .clickable {
+                                    inputMinutes = mins.toString()
+                                    triggerHaptics(context)
+                                }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "${mins}m",
+                                color = if (selected) Color.Black else Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                // Numeric Keypad (Apple iOS Style, translucent)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                ) {
+                    val keys = listOf(
+                        listOf("1", "2", "3"),
+                        listOf("4", "5", "6"),
+                        listOf("7", "8", "9"),
+                        listOf("C", "0", "⌫")
+                    )
+                    keys.forEach { row ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            row.forEach { key ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF0F0F0F))
+                                        .border(1.dp, Color(0xFF1F1F1F), CircleShape)
+                                        .clickable {
+                                            triggerHaptics(context)
+                                            when (key) {
+                                                "C" -> inputMinutes = ""
+                                                "⌫" -> if (inputMinutes.isNotEmpty()) {
+                                                    inputMinutes = inputMinutes.dropLast(1)
+                                                }
+                                                else -> {
+                                                    if (inputMinutes.length < 3) {
+                                                        inputMinutes += key
+                                                    }
                                                 }
                                             }
-                                        }
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = key,
-                                    color = if (key == "C" || key == "⌫") Color(0xFFD4AF37) else Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = key,
+                                        color = if (key == "C" || key == "⌫") Color(0xFFD4AF37) else Color.White,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Light
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Swipe Credit Card
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                if (!isApproving && !hasApproved) {
-                    Text(
-                        text = "↑ TRASCINA LA CARTA PER PAGARE ↑",
-                        color = Color(0xFF6E6E73),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 10.dp)
-                    )
-                }
-
-                // Black Card
+                // Credit Card Swipe (Apple Wallet Style)
                 Box(
                     modifier = Modifier
-                        .offset { IntOffset(0, cardOffsetY.toInt()) }
-                        .width(260.dp)
-                        .height(120.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(Color(0xFF1E1E1E), Color(0xFF050505))
-                            )
-                        )
-                        .border(
-                            width = 1.5.dp,
-                            brush = luxuryBorderBrush,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .pointerInput(isApproving || hasApproved) {
-                            if (isApproving || hasApproved) return@pointerInput
-                            detectDragGestures(
-                                onDragEnd = {
-                                    if (cardOffsetY < -swipeThresholdPx && cost > 0) {
-                                        isApproving = true
-                                        coroutineScope.launch {
-                                            if (balance >= cost) {
-                                                // Success Flow
-                                                repository.deductFocusFunds(cost, "Unlocked $appName")
-                                                triggerHaptics(context, doubleVibrate = false)
-                                                playSuccessSound()
-                                                hasApproved = true
-                                                delay(800)
-                                                onUnlockSuccess(cost.toInt())
-                                            } else {
-                                                // Failure Flow
-                                                triggerHaptics(context, doubleVibrate = true)
-                                                cardOffsetY = 0f
-                                                isApproving = false
-                                                showInsufficientDialog = true
-                                            }
-                                        }
-                                    } else {
-                                        cardOffsetY = 0f
-                                    }
-                                },
-                                onDragCancel = {
-                                    cardOffsetY = 0f
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    cardOffsetY = (cardOffsetY + dragAmount.y).coerceAtMost(0f)
-                                }
-                            )
-                        }
-                        .padding(16.dp)
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    contentAlignment = Alignment.BottomCenter
                 ) {
-                    // Inside Card Design
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.SpaceBetween
+                    // Swipe guide background track
+                    Box(
+                        modifier = Modifier
+                            .width(280.dp)
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF070707))
+                            .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.TopCenter
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "FocusFunds",
-                                color = Color(0xFFD4AF37),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                            // Elegant "F" logo
-                            Text(
-                                text = "F",
-                                color = Color.White,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Serif
-                            )
-                        }
+                        Text(
+                            text = "▲ TRASCINA VERSO L'ALTO PER SBLOCCARE ▲",
+                            color = Color(0xFF444444),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            modifier = Modifier.padding(top = 10.dp)
+                        )
+                    }
 
-                        // Gold Chip
+                    // Skeuomorphic Luxury Credit Card
+                    val reflectionBrush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.05f),
+                            Color.White.copy(alpha = 0.15f),
+                            Color.White.copy(alpha = 0.05f),
+                            Color.Transparent
+                        ),
+                        start = Offset(shimmerOffset, 0f),
+                        end = Offset(shimmerOffset + 150f, 300f)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .offset { IntOffset(0, cardOffsetY.toInt()) }
+                            .width(270.dp)
+                            .height(125.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(Color(0xFF161616), Color(0xFF030303))
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.sweepGradient(
+                                    colors = listOf(Color(0xFFD4AF37), Color(0xFF332205), Color(0xFFF3E5AB), Color(0xFFD4AF37))
+                                ),
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .pointerInput(isApproving || hasApproved) {
+                                if (isApproving || hasApproved) return@pointerInput
+                                detectDragGestures(
+                                    onDragEnd = {
+                                        if (cardOffsetY < -swipeThresholdPx && cost > 0) {
+                                            isApproving = true
+                                            coroutineScope.launch {
+                                                if (balance >= cost) {
+                                                    repository.deductFocusFunds(cost, "Unlocked $appName")
+                                                    triggerHaptics(context, doubleVibrate = false)
+                                                    playSuccessSound()
+                                                    hasApproved = true
+                                                    delay(900)
+                                                    onUnlockSuccess(cost.toInt())
+                                                } else {
+                                                    triggerHaptics(context, doubleVibrate = true)
+                                                    cardOffsetY = 0f
+                                                    isApproving = false
+                                                    showInsufficientDialog = true
+                                                }
+                                            }
+                                        } else {
+                                            cardOffsetY = 0f
+                                        }
+                                    },
+                                    onDragCancel = {
+                                        cardOffsetY = 0f
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        cardOffsetY = (cardOffsetY + dragAmount.y).coerceAtMost(0f)
+                                    }
+                                )
+                            }
+                    ) {
+                        // Reflective light overlay
                         Box(
                             modifier = Modifier
-                                .size(24.dp, 18.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(Color(0xFFD4AF37), Color(0xFFF3E5AB))
-                                    )
-                                )
+                                .fillMaxSize()
+                                .background(reflectionBrush)
                         )
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom
+                        // Card face details
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = "L'OTTIMIZZATORE",
-                                color = Color.White,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Light,
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = "CLASSIC CARD",
-                                color = Color(0xFF8E8E93),
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "FocusFunds",
+                                    color = Color(0xFFD4AF37),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    text = "F",
+                                    color = Color.White,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Serif
+                                )
+                            }
+
+                            // Skeuomorphic gold chip drawn on Canvas
+                            Canvas(modifier = Modifier.size(28.dp, 20.dp)) {
+                                drawRoundRect(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(Color(0xFFE5C060), Color(0xFFC59F3F))
+                                    ),
+                                    size = size,
+                                    cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                                )
+                                // Internal contact division lines
+                                drawLine(Color(0xFF3C2F0F), Offset(9.dp.toPx(), 0f), Offset(9.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
+                                drawLine(Color(0xFF3C2F0F), Offset(19.dp.toPx(), 0f), Offset(19.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
+                                drawLine(Color(0xFF3C2F0F), Offset(0f, 10.dp.toPx()), Offset(28.dp.toPx(), 10.dp.toPx()), strokeWidth = 1f)
+                                drawRoundRect(
+                                    color = Color(0xFF3C2F0F),
+                                    topLeft = Offset(9.dp.toPx(), 5.dp.toPx()),
+                                    size = Size(10.dp.toPx(), 10.dp.toPx()),
+                                    cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                                    style = Stroke(1f)
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Text(
+                                    text = "L'OTTIMIZZATORE",
+                                    color = Color.White,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.ExtraLight,
+                                    letterSpacing = 1.5.sp
+                                )
+                                Text(
+                                    text = "BLACK CARD",
+                                    color = Color(0xFFD4AF37),
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -486,12 +588,13 @@ fun POSOverlayContent(
     // Insufficient Funds Dialog (Emergency Unlock)
     if (showInsufficientDialog) {
         AlertDialog(
-            onDismissRequest = { /* Force choice */ },
-            containerColor = Color(0xFF0F0F0F),
+            onDismissRequest = { },
+            containerColor = Color(0xFF0C0C0C),
+            modifier = Modifier.border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(28.dp)),
             title = {
                 Text(
                     text = "SALDO INSUFFICIENTE",
-                    color = Color(0xFFCF6679),
+                    color = Color(0xFFFF5252),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
@@ -515,7 +618,7 @@ fun POSOverlayContent(
                             triggerHaptics(context, doubleVibrate = false)
                             playSuccessSound()
                             hasApproved = true
-                            delay(800)
+                            delay(900)
                             onEmergencyUnlock()
                         }
                     }
@@ -530,9 +633,16 @@ fun POSOverlayContent(
                         onCancel()
                     }
                 ) {
-                    Text("Esci", color = Color.Gray)
+                    Text("Annulla ed Esci", color = Color.Gray)
                 }
             }
         )
+    }
+}
+
+// Cubic Hermite interpolator helper for decelerating animation curve
+class DecelerateInterpolator {
+    fun toEasing(): (Float) -> Float = { input ->
+        1.0f - (1.0f - input) * (1.0f - input)
     }
 }
