@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.focusfunds.app.data.BlockedApp
@@ -101,6 +102,45 @@ fun isAccessibilityServiceEnabled(context: Context, service: Class<out Accessibi
     return false
 }
 
+// Subtle, slow-moving luxury background simulating brushed metal lights
+@Composable
+fun LuxuryDynamicBackground() {
+    val infiniteTransition = rememberInfiniteTransition(label = "ambient_light")
+    
+    val posX by infiniteTransition.animateFloat(
+        initialValue = 0.1f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(12000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "posX"
+    )
+    val posY by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(16000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "posY"
+    )
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        drawRect(Color.Black)
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFF0F0F12), // Deep Anthracite
+                    Color(0xFF000000)
+                ),
+                center = Offset(size.width * posX, size.height * posY),
+                radius = size.width * 1.6f
+            )
+        )
+    }
+}
+
 @Composable
 fun FocusFundsApp() {
     val context = LocalContext.current
@@ -113,6 +153,8 @@ fun FocusFundsApp() {
         mutableStateOf(isAccessibilityServiceEnabled(context, AppBlockAccessibilityService::class.java))
     }
 
+    val inFocus = walletState?.inFocusMode == true
+
     LaunchedEffect(Unit) {
         while (true) {
             hasOverlayPermission = Settings.canDrawOverlays(context)
@@ -121,13 +163,13 @@ fun FocusFundsApp() {
         }
     }
 
-    Scaffold(
-        containerColor = Color(0xFF000000)
-    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Shared Dynamic Luxury Background
+        LuxuryDynamicBackground()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
@@ -148,15 +190,17 @@ fun FocusFundsApp() {
                     }
                 )
             } else {
-                // Top Segmented Bar Selector (Apple Style)
-                Spacer(modifier = Modifier.height(16.dp))
-                PaddingWrapper {
-                    LuxuryTabSelector(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
+                // If in Focus Mode, hide the Tab Selector (OLED minimalist experience)
+                if (!inFocus) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    PaddingWrapper {
+                        LuxuryTabSelector(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-                Spacer(modifier = Modifier.height(16.dp))
 
                 Box(modifier = Modifier.weight(1f)) {
-                    when (selectedTab) {
+                    when (if (inFocus) 0 else selectedTab) {
                         0 -> DashboardTab(walletState, repository)
                         1 -> AppBlockerTab(repository)
                         2 -> StatementTab(repository)
@@ -169,21 +213,13 @@ fun FocusFundsApp() {
 }
 
 @Composable
-fun PaddingWrapper(content: @Composable () -> Unit) {
-    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-        content()
-    }
-}
-
-// Apple iOS Style Segmented Control
-@Composable
 fun LuxuryTabSelector(selectedTab: Int, onTabSelected: (Int) -> Unit) {
     val tabs = listOf("Wallet", "App", "Movimenti", "Report")
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF0F0F0F))
+            .background(Color(0xFF0F0F0F).copy(alpha = 0.8f))
             .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
             .padding(4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -215,6 +251,13 @@ fun LuxuryTabSelector(selectedTab: Int, onTabSelected: (Int) -> Unit) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun PaddingWrapper(content: @Composable () -> Unit) {
+    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+        content()
     }
 }
 
@@ -253,7 +296,7 @@ fun PermissionOverlay(
         if (!hasOverlay) {
             Button(
                 onClick = onRequestOverlay,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F0F0F)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F0F0F).copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -268,7 +311,7 @@ fun PermissionOverlay(
         if (!hasAccess) {
             Button(
                 onClick = onRequestAccess,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F0F0F)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F0F0F).copy(alpha = 0.5f)),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -304,11 +347,11 @@ fun DashboardTab(
         }
     }
 
-    // Shimmer effect for brushed metal card reflection
+    // Shimmer reflection effect
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer_glare_dashboard")
     val shimmerOffset by infiniteTransition.animateFloat(
-        initialValue = -300f,
-        targetValue = 900f,
+        initialValue = -350f,
+        targetValue = 950f,
         animationSpec = infiniteRepeatable(
             animation = tween(4000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
@@ -316,49 +359,70 @@ fun DashboardTab(
         label = "shimmerOffset"
     )
 
+    // Calculate current live balance (0.01 FF every 6 seconds)
+    val liveBalance = if (inFocus) {
+        val elapsedMs = System.currentTimeMillis() - startTimestamp
+        // 0.01 FF every 6 seconds (6000 ms)
+        balance + (elapsedMs / 60000.0) * 0.1
+    } else {
+        balance
+    }
+
+    // Card 3D floating animation when focusing
+    val cardScale by animateFloatAsState(
+        targetValue = if (inFocus) 1.05f else 1f,
+        animationSpec = tween(800, easing = EaseInOutCirc),
+        label = "cardScale"
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .padding(horizontal = 24.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Balance Title Header
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "PORTAFOGLIO VIRTUALE",
-                color = Color(0xFFD4AF37),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-                fontFamily = FontFamily.Monospace
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = if (inFocus) "Sessione di Focus in corso" else "Concentrazione inattiva",
-                color = Color.LightGray,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Light
-            )
+        // Minimal Title Header
+        if (!inFocus) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "WALLET PERSONALE",
+                    color = Color(0xFFD4AF37),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Nessuna sessione di concentrazione attiva",
+                    color = Color.Gray,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Light
+                )
+            }
+        } else {
+            // Emptiness/Minimalism when focusing
+            Spacer(modifier = Modifier.height(10.dp))
         }
 
-        // Luxury Credit Card Card Component
+        // Protagonist Luxury Credit Card
         val reflectionBrush = Brush.linearGradient(
             colors = listOf(
                 Color.Transparent,
-                Color.White.copy(alpha = 0.05f),
-                Color.White.copy(alpha = 0.15f),
-                Color.White.copy(alpha = 0.05f),
+                Color.White.copy(alpha = 0.04f),
+                Color.White.copy(alpha = 0.14f),
+                Color.White.copy(alpha = 0.04f),
                 Color.Transparent
             ),
             start = Offset(shimmerOffset, 0f),
-            end = Offset(shimmerOffset + 150f, 300f)
+            end = Offset(shimmerOffset + 150f, 320f)
         )
 
         Box(
             modifier = Modifier
-                .width(300.dp)
-                .height(180.dp)
+                .width(310.dp * cardScale)
+                .height(185.dp * cardScale)
                 .clip(RoundedCornerShape(16.dp))
                 .background(
                     brush = Brush.verticalGradient(
@@ -371,20 +435,21 @@ fun DashboardTab(
                         colors = listOf(Color(0xFFD4AF37), Color(0xFF332205), Color(0xFFF3E5AB), Color(0xFFD4AF37))
                     ),
                     shape = RoundedCornerShape(16.dp)
-                )
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            // Shiny sweep reflections
+            // Shiny reflection sweep
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(reflectionBrush)
             )
 
-            // Content
+            // Card face details
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(20.dp),
+                    .padding(22.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
@@ -395,34 +460,31 @@ fun DashboardTab(
                     Text(
                         text = "FocusFunds",
                         color = Color(0xFFD4AF37),
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 1.5.sp
                     )
                     Text(
                         text = "F",
                         color = Color.White,
-                        fontSize = 26.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Serif
                     )
                 }
 
-                // Balance centered
-                Column {
+                // Balance display engraved directly on card
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = "DISPONIBILITÀ DI CREDITO",
-                        color = Color.Gray,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                    Text(
-                        text = "${String.format("%.2f", balance)} FF",
+                        text = String.format(Locale.US, "%.2f FF", liveBalance),
                         color = Color.White,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.Monospace
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = FontFamily.SansSerif,
+                        letterSpacing = 1.sp
                     )
                 }
 
@@ -433,13 +495,14 @@ fun DashboardTab(
                 ) {
                     Text(
                         text = "L'OTTIMIZZATORE",
-                        color = Color.White,
+                        color = Color.White.copy(alpha = 0.8f),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.ExtraLight,
                         letterSpacing = 1.5.sp
                     )
-                    // Smart Chip mockup drawn on card
-                    Canvas(modifier = Modifier.size(32.dp, 22.dp)) {
+                    
+                    // Smart Chip canvas
+                    Canvas(modifier = Modifier.size(30.dp, 20.dp)) {
                         drawRoundRect(
                             brush = Brush.linearGradient(
                                 colors = listOf(Color(0xFFE5C060), Color(0xFFC59F3F))
@@ -447,13 +510,13 @@ fun DashboardTab(
                             size = size,
                             cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
                         )
-                        drawLine(Color(0xFF3C2F0F), Offset(10.dp.toPx(), 0f), Offset(10.dp.toPx(), 22.dp.toPx()), strokeWidth = 1f)
-                        drawLine(Color(0xFF3C2F0F), Offset(22.dp.toPx(), 0f), Offset(22.dp.toPx(), 22.dp.toPx()), strokeWidth = 1f)
-                        drawLine(Color(0xFF3C2F0F), Offset(0f, 11.dp.toPx()), Offset(32.dp.toPx(), 11.dp.toPx()), strokeWidth = 1f)
+                        drawLine(Color(0xFF3C2F0F), Offset(10.dp.toPx(), 0f), Offset(10.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
+                        drawLine(Color(0xFF3C2F0F), Offset(20.dp.toPx(), 0f), Offset(20.dp.toPx(), 20.dp.toPx()), strokeWidth = 1f)
+                        drawLine(Color(0xFF3C2F0F), Offset(0f, 10.dp.toPx()), Offset(30.dp.toPx(), 10.dp.toPx()), strokeWidth = 1f)
                         drawRoundRect(
                             color = Color(0xFF3C2F0F),
-                            topLeft = Offset(10.dp.toPx(), 6.dp.toPx()),
-                            size = Size(12.dp.toPx(), 10.dp.toPx()),
+                            topLeft = Offset(10.dp.toPx(), 5.dp.toPx()),
+                            size = Size(10.dp.toPx(), 10.dp.toPx()),
                             cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
                             style = Stroke(1f)
                         )
@@ -462,54 +525,31 @@ fun DashboardTab(
             }
         }
 
-        // Live Timer (Apple iOS Screen style)
-        if (inFocus) {
-            val totalSecs = liveDurationMs / 1000
-            val hours = totalSecs / 3600
-            val minutes = (totalSecs % 3600) / 60
-            val seconds = totalSecs % 60
-            val liveFunds = (liveDurationMs / 60000.0) * 0.1
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
+        // Minimalist info when not focusing
+        if (!inFocus) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = String.format("%02d:%02d:%02d", hours, minutes, seconds),
-                    color = Color.White,
-                    fontSize = 44.sp,
-                    fontWeight = FontWeight.ExtraLight,
-                    fontFamily = FontFamily.SansSerif
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "+${String.format("%.4f", liveFunds)} FF GUADAGNATI",
-                    color = Color(0xFFD4AF37),
-                    fontSize = 11.sp,
+                    text = "TASSO DI ACCUMULO ATTIVO",
+                    color = Color.Gray,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.5.sp,
                     fontFamily = FontFamily.Monospace
                 )
-            }
-        } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Tasso di rendimento Focus",
-                    color = Color.Gray,
-                    fontSize = 12.sp,
+                    text = "0.01 FF guadagnati ogni 6 secondi",
+                    color = Color.LightGray,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Normal
                 )
-                Text(
-                    text = "10 MINUTI = 1.0 FF (0.1 FF/MIN)",
-                    color = Color.LightGray,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.sp
-                )
             }
+        } else {
+            // Emptiness in focus screen to keep user concentrated
+            Spacer(modifier = Modifier.height(10.dp))
         }
 
-        // Action Button or Safety Exit Hold (Apple Stop Button Style)
+        // Start Button / Circular Exit Progress
         if (!inFocus) {
             Button(
                 onClick = {
@@ -557,14 +597,13 @@ fun DashboardTab(
                 }
             }
 
-            // Stop button with circular progress ring
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(bottom = 10.dp)
+                modifier = Modifier.padding(bottom = 12.dp)
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(100.dp)
+                    modifier = Modifier.size(96.dp)
                 ) {
                     CircularProgressIndicator(
                         progress = holdProgress,
@@ -575,10 +614,10 @@ fun DashboardTab(
                     )
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(76.dp)
                             .clip(CircleShape)
-                            .background(if (isHolding) Color(0xFF300B0B) else Color(0xFF0F0F0F))
-                            .border(1.dp, if (isHolding) Color(0xFFFF5252) else Color(0xFF222222), CircleShape)
+                            .background(if (isHolding) Color(0xFF2E0909) else Color(0xFF0F0F0F))
+                            .border(1.dp, if (isHolding) Color(0xFFFF5252) else Color(0xFF1E1E1E), CircleShape)
                             .pointerInput(Unit) {
                                 detectTapGestures(
                                     onPress = {
@@ -593,17 +632,17 @@ fun DashboardTab(
                         Text(
                             text = "STOP",
                             color = Color(0xFFFF5252),
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            letterSpacing = 1.5.sp
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = if (isHolding) "Mantieni premuto per confermare" else "TIENI PREMUTO PER COMPLETARE",
+                    text = if (isHolding) "Mantieni premuto..." else "TIENI PREMUTO PER COMPLETARE FOCUS",
                     color = Color.Gray,
-                    fontSize = 9.sp,
+                    fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
@@ -644,7 +683,6 @@ fun AppBlockerTab(repository: FocusFundsRepository) {
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        // Apple style search bar (translucent, rounded)
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -661,7 +699,7 @@ fun AppBlockerTab(repository: FocusFundsRepository) {
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF0F0F0F)),
+                .background(Color(0xFF0F0F0F).copy(alpha = 0.5f)),
             singleLine = true
         )
 
@@ -675,7 +713,7 @@ fun AppBlockerTab(repository: FocusFundsRepository) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0xFF0F0F0F))
+                        .background(Color(0xFF0F0F0F).copy(alpha = 0.7f))
                         .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(14.dp))
                         .padding(horizontal = 18.dp, vertical = 14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -761,7 +799,7 @@ fun StatementTab(repository: FocusFundsRepository) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFF0F0F0F))
+                            .background(Color(0xFF0F0F0F).copy(alpha = 0.7f))
                             .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(14.dp))
                             .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -771,7 +809,6 @@ fun StatementTab(repository: FocusFundsRepository) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            // Circular Category Icon (Apple Card style letter)
                             val isDeposit = tx.type == "DEPOSIT"
                             val isEmergency = tx.type == "EMERGENCY"
                             
@@ -833,7 +870,7 @@ fun StatementTab(repository: FocusFundsRepository) {
                         val label = if (isEmergency) " (EMERGENCY)" else ""
 
                         Text(
-                            text = "$prefix${String.format("%.2f", tx.amount)} FF$label",
+                            text = "$prefix${String.format(Locale.US, "%.2f", tx.amount)} FF$label",
                             color = color,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -885,7 +922,7 @@ fun ReportTab(repository: FocusFundsRepository) {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "ATTIVITÀ E RISPARMIO",
+                text = "ATTIVITÀ E RISPARMIO SETTIMANALE",
                 color = Color(0xFFD4AF37),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
@@ -901,15 +938,13 @@ fun ReportTab(repository: FocusFundsRepository) {
             )
         }
 
-        // Custom Stacked Weekly Bar Chart
         WeeklyBarChart(transactions = transactions)
 
-        // Floating Statistics Indicator
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF0F0F0F))
+                .background(Color(0xFF0F0F0F).copy(alpha = 0.7f))
                 .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -1000,7 +1035,6 @@ fun ReportTab(repository: FocusFundsRepository) {
     }
 }
 
-// Custom Apple Health / Apple Card style Weekly activity chart
 @Composable
 fun WeeklyBarChart(transactions: List<Transaction>) {
     val days = listOf("Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom")
@@ -1030,7 +1064,7 @@ fun WeeklyBarChart(transactions: List<Transaction>) {
             .height(180.dp)
             .padding(vertical = 12.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF0F0F0F))
+            .background(Color(0xFF0F0F0F).copy(alpha = 0.5f))
             .border(1.dp, Color(0xFF1E1E1E), RoundedCornerShape(16.dp))
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1040,7 +1074,6 @@ fun WeeklyBarChart(transactions: List<Transaction>) {
             val focusVal = dailyFocus[i]
             val unlockVal = dailyUnlock[i]
             
-            // Scaled height
             val focusHeight = (focusVal / maxVal * 110).toFloat().coerceAtLeast(3f)
             val unlockHeight = (unlockVal / maxVal * 110).toFloat().coerceAtLeast(3f)
             
@@ -1054,7 +1087,6 @@ fun WeeklyBarChart(transactions: List<Transaction>) {
                         .height(110.dp),
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    // Empty background track
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -1063,7 +1095,6 @@ fun WeeklyBarChart(transactions: List<Transaction>) {
                     )
 
                     if (focusVal > 0 || unlockVal > 0) {
-                        // Stacked layout: Red (distraction) on top of Gold (focus)
                         val totalHeight = (focusHeight + unlockHeight).coerceAtMost(110f)
                         Box(
                             modifier = Modifier

@@ -167,6 +167,8 @@ fun POSOverlayContent(
         color = Color(0xFF000000) // Pure Black
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
+            LuxuryDynamicBackground()
+            
             // Gold success wave background effect
             if (hasApproved) {
                 Box(

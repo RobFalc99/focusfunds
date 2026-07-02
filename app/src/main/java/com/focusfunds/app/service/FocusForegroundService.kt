@@ -82,7 +82,7 @@ class FocusForegroundService : LifecycleService() {
                 val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 notificationManager.notify(NOTIFICATION_ID, notification)
                 
-                delay(10000)
+                delay(6000)
             }
         }
     }
